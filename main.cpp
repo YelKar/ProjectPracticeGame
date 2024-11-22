@@ -1,11 +1,9 @@
-#include "common/PixelImage.cpp"
-#include "assets/letters.cpp"
-#include "Game.h"
-
-sf::RenderWindow window(sf::VideoMode(800, 600), "SFML works!"/*, sf::Style::Fullscreen*/);
+#include <unordered_map>
+#include "src/Game.h"
+#include "src/Ball.h"
 
 int main() {
-    Game::init();
-    Game::loop(window);
+    std::unordered_map<int, sf::Event::EventType> map{};
+    std::cout << map.count(0) << std::endl;
     return 0;
 }
