@@ -5,19 +5,19 @@
 #include <SFML/Graphics/Texture.hpp>
 #include <iostream>
 #include "util/Image.h"
-#include "Alphabet.h"
 #include "PlayField.h"
 #include "util/EventManager.h"
 #include "util/Button.h"
 #include "GameState.h"
 #include "Globals.h"
 #include "Menu.h"
+#include "Player.h"
 
 
-const auto text = R"TEXT(
+const std::wstring text = LR"TEXT(
 #include <stdio.h>
-// _______________________________________________________________
-// ---------------------------------------------------------------
+
+
 
 int main() {
     int sum = 0; // Counter for the sum of numbers
@@ -49,9 +49,17 @@ int main() {
 
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode({800, 600}), "qwerty", sf::Style::Default);
+//    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "qwerty", sf::Style::Fullscreen);
+    sf::RenderWindow window(sf::VideoMode(800, 600), "qwerty", sf::Style::Default);
 
-    PlayField playField(text);
+
+    PlayField playField;
+    playField.setCode(text);
+    playField.update();
+
+    Player player(playField);
+    player.setPosition({100, -100});
+
     EventManager commonEventManager;
     EventManager gameEventManager;
     EventManager menuEventManager;
@@ -68,7 +76,17 @@ int main() {
     Menu menu(window, menuEventManager, gameState);
     menu.Init();
 
+    sf::RectangleShape background;
+    background.setSize((sf::Vector2f) window.getSize());
+    background.setFillColor(sf::Color(58, 58, 57));
+
+    player.listenEvents(gameEventManager);
+
+    sf::Clock clock;
+
     while (window.isOpen()) {
+        auto dt = clock.restart().asSeconds();
+
         window.clear();
         sf::Event event{};
         while (window.pollEvent(event)) {
@@ -89,10 +107,20 @@ int main() {
                 menu.drawMenu();
                 break;
             case GameState::GAME:
+                player.update(dt);
+
+                window.draw(background);
                 auto letters = playField.letterImages;
-                for (const auto& letter : letters) {
-                    window.draw(letter.image);
+                for (const auto& line : letters) {
+                    for (const auto& letter : line.second) {
+                        sf::RectangleShape rect(letter.second.hitBox.getSize());
+                        rect.setPosition(letter.second.hitBox.getPosition());
+                        rect.setFillColor(sf::Color(50, 50, 50));
+                        window.draw(rect);
+                        window.draw(letter.second.symbol);
+                    }
                 }
+                window.draw(player.getShape());
                 break;
         }
 

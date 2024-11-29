@@ -1,26 +1,33 @@
 #pragma once
 
-
-#include "util/Image.h"
-
-
+#include <SFML/Graphics/Text.hpp>
+#include <memory>
+#include "Globals.h"
 
 
 class Alphabet {
-    Image letter;
+    int fontSize = 24;
+    sf::Vector2f symbolSize = {15, 30};
 public:
-    static const int LETTER_HEIGHT = 20;
-    static const int LETTER_WIDTH = 11;
-    using letterType = char;
-    static std::string LETTERS;
+    void setFontSize(int newFontSize) {
+        fontSize = newFontSize;
+    }
 
-    explicit Alphabet(const std::string& src) : letter(src) {}
-    Image get(char ch) {
-        auto pos = LETTERS.find(ch);
+    void setSymbolSize(sf::Vector2f size) {
+        symbolSize = size;
+    }
 
-        letter.setRect({static_cast<int>(LETTER_WIDTH * pos), 0, LETTER_WIDTH, LETTER_HEIGHT});
-        return letter;
+    sf::Vector2f getSymbolSize() {
+        return symbolSize;
+    }
+
+    [[nodiscard]] std::unique_ptr<sf::Text> get(wchar_t ch) const {
+        auto textShape = std::make_unique<sf::Text>();
+        textShape->setCharacterSize(fontSize);
+        textShape->setStyle(sf::Text::Bold);
+        textShape->setString(std::wstring(1, ch));
+        textShape->setFillColor(sf::Color::White);
+        textShape->setFont(font);
+        return textShape;
     }
 };
-
-std::string Alphabet::LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?(){}[]<=>|-_;:'\"/\\%&*#$+`~";
