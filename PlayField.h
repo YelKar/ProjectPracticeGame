@@ -8,19 +8,28 @@
 #include <iostream>
 #include "Alphabet.h"
 
+
+using namespace Config::Workspace;
+
+
 class PlayField {
-    typedef struct letterImage {
-        wchar_t letter{};
-        sf::Text symbol{};
-        sf::FloatRect hitBox{};
-    } letterImage;
     Alphabet alphabet;
     int LINE_SPACE = 30;
     int letterWidth = 22;
     int letterHeight = 40;
     std::wstring code;
 
+    int focus = -1;
+    int height{};
+
 public:
+    typedef struct letterImage {
+        wchar_t letter{};
+        sf::Text symbol{};
+        sf::FloatRect hitBox{};
+        int index{};
+    } letterImage;
+
     std::map<int, std::map<int, letterImage>> letterImages;
 
     explicit PlayField() {
@@ -36,12 +45,21 @@ public:
         code = code_;
     }
 
+    [[nodiscard]] const std::wstring& getCode() const {
+        return code;
+    }
+
+    [[nodiscard]] int getHeight() const {
+        return height;
+    }
+
     void update() {
         for (auto letterImage : letterImages) {
             letterImage.second.clear();
         }
         letterImages.clear();
-        for (int line = 0, posInLine = 0, pos = 0; pos < code.length(); pos ++) {
+        int line = 0;
+        for (int posInLine = 0, pos = 0; pos < code.length(); pos ++) {
             auto letter = code[pos];
 
             switch (letter) {
@@ -65,20 +83,73 @@ public:
                             (sf::Vector2f) img->getPosition() + sf::Vector2f{1, 4},
                             sf::Vector2f{static_cast<float>(letterWidth) - 5, static_cast<float>(letterHeight) - 6}
                         },
+                        .index = pos,
                     };
                     posInLine ++;
             }
         }
+        height = line * (letterHeight + LINE_SPACE);
     }
 
-    bool intersects(sf::FloatRect rect) {
+    std::shared_ptr<letterImage> intersection(sf::FloatRect rect) {
         for (const auto& line : letterImages) {
             for (const auto& letter : line.second) {
                 if (letter.second.hitBox.intersects(rect)) {
-                    return true;
+                    return std::make_shared<letterImage>(letter.second);
                 }
             }
         }
-        return false;
+        return nullptr;
+    }
+
+    void take(int letterIndex) {
+        code = code.substr(0, letterIndex) + code.substr(letterIndex+1, code.length());
+    }
+
+    void put(int letterIndex, wchar_t ch) {
+        code = code.substr(0, letterIndex) + ch + code.substr(letterIndex, code.length());
+    }
+
+    void moveLetter(int letterIndex, int direction = 0) {
+        if (code.size() <= letterIndex || abs(direction) > 1 || letterIndex + direction < 0) {
+            return;
+        }
+
+        if (letterIndex + direction >= code.size() || code[letterIndex + direction] == '\n') {
+            code = code.substr(0, letterIndex) + std::wstring(1, ' ') + code.substr(letterIndex, code.size());
+        } else {
+            std::wcout << "INSERT" << std::endl;
+            wchar_t ch = code[letterIndex];
+            code = code.substr(0, letterIndex) + code.substr(letterIndex + 1, code.length());
+            code = code.insert(letterIndex + direction, std::wstring(1, ch));
+        }
+    }
+
+    void draw(sf::RenderWindow& window) const {
+        window.clear(BACKGROUND_COLOR);
+        auto letters = letterImages;
+        for (const auto& line : letters) {
+            for (const auto& letter : line.second) {
+                if (focus == letter.second.index) {
+                    window.draw(PlayField::createFocusShape(letter.second));
+                }
+                window.draw(letter.second.symbol);
+            }
+        }
+    }
+
+    void setFocus(int index) {
+        focus = index;
+    }
+
+private:
+    static sf::RectangleShape createFocusShape(const letterImage& letter) {
+        sf::RectangleShape rect(letter.hitBox.getSize());
+        rect.setPosition(letter.hitBox.getPosition());
+        rect.setFillColor(LETTER_FOCUS_BACKGROUND_COLOR);
+        rect.setOutlineColor(LETTER_FOCUS_STROKE_COLOR);
+        rect.setOutlineThickness(1);
+
+        return rect;
     }
 };

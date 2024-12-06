@@ -1,130 +1,109 @@
 
 
-#include <SFML/Graphics/RenderWindow.hpp>
-#include <SFML/Window/Event.hpp>
-#include <SFML/Graphics/Texture.hpp>
-#include <iostream>
-#include "util/Image.h"
-#include "PlayField.h"
-#include "util/EventManager.h"
-#include "util/Button.h"
-#include "GameState.h"
-#include "Globals.h"
-#include "Menu.h"
-#include "Player.h"
 
-
-const std::wstring text = LR"TEXT(
-#include <stdio.h>
-
+#include "Game.h"
 
 
 int main() {
-    int sum = 0; // Counter for the sum of numbers
-
-    printf("Iterating through numbers from 1 to 20 with various conditions:\n");
-
-    for (int i = 1; i <= 20; i++) {
-        // Check for even or odd
-        if (i % 2 == 0) {
-            printf("Number %d: Even\n", i);
-        } else {
-            printf("Number %d: Odd\n", i);
-        }
-
-        // Check divisibility by 3
-        if (i % 3 == 0) {
-            printf("Number %d is divisible by 3\n", i);
-        }
-
-        // Add the number to the sum
-        sum += i;
-    }
-
-    printf("\nThe sum of all numbers from 1 to 20: %d\n", sum);
-
-    return 0;
-}
-)TEXT";
-
-
-int main() {
-//    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "qwerty", sf::Style::Fullscreen);
-    sf::RenderWindow window(sf::VideoMode(800, 600), "qwerty", sf::Style::Default);
-
-
-    PlayField playField;
-    playField.setCode(text);
-    playField.update();
-
-    Player player(playField);
-    player.setPosition({100, -100});
-
-    EventManager commonEventManager;
-    EventManager gameEventManager;
-    EventManager menuEventManager;
-    GameState gameState = GameState::MENU;
-
-    commonEventManager.AddEventListener(sf::Event::Closed, [&window] (auto _) {
-        window.close();
-    });
-
-    if (!font.loadFromFile("assets/Font2.ttf")) {
-        exit(1);
-    }
-
-    Menu menu(window, menuEventManager, gameState);
-    menu.Init();
-
-    sf::RectangleShape background;
-    background.setSize((sf::Vector2f) window.getSize());
-    background.setFillColor(sf::Color(58, 58, 57));
-
-    player.listenEvents(gameEventManager);
-
-    sf::Clock clock;
-
-    while (window.isOpen()) {
-        auto dt = clock.restart().asSeconds();
-
-        window.clear();
-        sf::Event event{};
-        while (window.pollEvent(event)) {
-            switch (gameState) {
-                case GameState::MENU:
-                    menuEventManager.HandleEvent(event);
-                    break;
-                case GameState::GAME:
-                    gameEventManager.HandleEvent(event);
-                    break;
-            }
-            commonEventManager.HandleEvent(event);
-        }
-
-        switch (gameState) {
-            case GameState::MENU:
-                menu.update();
-                menu.drawMenu();
-                break;
-            case GameState::GAME:
-                player.update(dt);
-
-                window.draw(background);
-                auto letters = playField.letterImages;
-                for (const auto& line : letters) {
-                    for (const auto& letter : line.second) {
-                        sf::RectangleShape rect(letter.second.hitBox.getSize());
-                        rect.setPosition(letter.second.hitBox.getPosition());
-                        rect.setFillColor(sf::Color(50, 50, 50));
-                        window.draw(rect);
-                        window.draw(letter.second.symbol);
-                    }
-                }
-                window.draw(player.getShape());
-                break;
-        }
-
-        window.display();
-    }
+//    std::wstring text;
+//    IO::getTextFromFile("input/1.c", text);
+//
+//    sf::Vector2i workSpaceSize = {800, 400};
+//
+////    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "qwerty", sf::Style::Fullscreen);
+//    sf::RenderWindow window(sf::VideoMode(800, 600), "qwerty", sf::Style::Default);
+//
+//    sf::View camera;
+//    camera.setSize((sf::Vector2f) window.getSize());
+//    PlayField playField;
+//    playField.setCode(text);
+//    playField.update();
+//
+//    Player player(playField);
+//    player.setPosition({0, -100});
+//
+//    EventManager commonEventManager;
+//    EventManager gameEventManager;
+//    EventManager menuEventManager;
+//    GameState gameState = GameState::MENU;
+//
+//    commonEventManager.AddEventListener(sf::Event::Closed, [&window, &playField] (auto _) {
+//        std::cout << "hello\n";
+//        window.close();
+//    });
+//
+//    if (!Config::font.loadFromFile(Config::FONT_PATH)) {
+//        exit(1);
+//    }
+//
+//    Menu menu(window, menuEventManager, gameState);
+//    menu.Init();
+//
+//    player.listenEvents(gameEventManager);
+//    // todo разделить длинные функции на покороче
+//    // todo 20-30 строк, 2-3 уровня вложенности
+//    sf::Clock clock;
+//
+//    while (window.isOpen()) {
+//        auto dt = clock.restart().asSeconds();
+//
+//        window.clear();
+//        sf::Event event{};
+//        while (window.pollEvent(event)) {
+//            switch (gameState) {
+//                case GameState::MENU:
+//                    menuEventManager.HandleEvent(event);
+//                    break;
+//                case GameState::GAME:
+//                    gameEventManager.HandleEvent(event);
+//                    break;
+//                case GameState::GAME_END:
+//                    break;
+//            }
+//            commonEventManager.HandleEvent(event);
+//        }
+//
+//        switch (gameState) {
+//            case GameState::GAME_END:
+//
+//                break;
+//            case GameState::MENU:
+//                menu.update();
+//                menu.drawMenu();
+//                break;
+//            case GameState::GAME:
+//                player.update(dt);
+//
+//                if (!player.isActive()) {
+//                    gameState = GameState::GAME_END;
+//                }
+//
+//                auto playerPos = player.getPosition();
+//                auto playerSize = player.getSize();
+//                camera.setCenter(
+//                    std::max(playerPos.x + playerSize.x / 2, static_cast<sf::Vector2f>(window.getSize()).x / 2),
+//                    std::max(playerPos.y + playerSize.y / 2, static_cast<sf::Vector2f>(window.getSize()).y / 2)
+//                );
+//
+//                auto focusedLetter = player.getFocusLetter();
+//
+//                playField.setFocus(focusedLetter != nullptr ? focusedLetter->index : -1);
+//                playField.draw(window);
+//
+//                window.draw(player.getShape());
+//                auto inventory = (sf::Sprite&) player.getInventoryShape();
+//                inventory.setPosition(
+//                    sf::Vector2f (window.getSize() - inventory.getTexture()->getSize())
+//                    + camera.getCenter() - sf::Vector2f (window.getSize()) / 2.f
+//                );
+//                window.draw(inventory);
+//                window.setView(camera);
+//                break;
+//        }
+//        window.display();
+//    }
+    Game game;
+    game.Init();
+    game.Loop();
     return 0;
 }

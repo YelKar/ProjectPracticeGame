@@ -5,14 +5,12 @@
 #include "util/EventManager.h"
 #include "util/Button.h"
 #include "GameState.h"
-#include "Globals.h"
+#include "Config.h"
 
 class Menu {
     sf::RenderWindow& window;
     EventManager& eventManager;
     GameState &gameState;
-    Button newGameBtn;
-    Button resumeBtn;
 
     std::vector<Button> buttons;
 
@@ -21,14 +19,46 @@ class Menu {
     sf::Text numBarNumber;
 
     int btnTextSize = 60;
+
+    sf::RenderTexture texture;
+    sf::Sprite shape;
+
+    struct ButtonProps {
+        std::wstring text;
+        sf::Vector2f position;
+        sf::Color color;
+        Listener listener;
+    };
+
+    const std::vector<ButtonProps> buttonsProps = {
+        {
+            .text = L"start();",
+            .position = {200, 200},
+            .color = sf::Color::Green,
+            .listener = [this](auto){
+                std::cout << "39\n";
+                gameState = GameState::GAME;
+                std::cout << "41\n";
+            },
+        },
+        {
+            .text = L"resume();",
+            .position = {200, 300},
+            .color = sf::Color(255, 124, 0),
+            .listener = [this](auto){
+                gameState = GameState::GAME;
+            },
+        }
+    };
 public:
 
-    Menu(sf::RenderWindow &window_, EventManager &eventManager, GameState &gameState)
-        : window(window_), eventManager(eventManager), gameState(gameState) {
-//        this->gameState = gameState;
+    Menu(sf::RenderWindow &window, EventManager &eventManager, GameState &gameState)
+        : window(window), eventManager(eventManager), gameState(gameState) {
     }
 
     void Init() {
+//        texture.create()
+
         sf::Vector2f size{
             500,
             80,
@@ -37,44 +67,27 @@ public:
         background.setSize((sf::Vector2f) window.getSize());
         background.setFillColor(sf::Color(58, 58, 57));
 
-        buttons.push_back(
-            Button{}
-                .setBackgroundColor(background.getFillColor())
-                .setTextSize(btnTextSize)
-                .setTextColor(sf::Color::Green)
-                .setFont(font)
-                .setText(L"start();")
-                .setSize(size)
-                .setPosition({200, 200})
-                .Render()
-                .Connect(eventManager, sf::Event::MouseButtonPressed, [this](auto){
-                    gameState = GameState::GAME;
-                }
-            )
-        );
 
-        buttons.push_back(
-            Button{}
-                .setBackgroundColor(background.getFillColor())
-                .setTextSize(btnTextSize)
-                .setTextColor(sf::Color(255, 124, 0))
-                .setFont(font)
-                .setText(L"resume();")
-                .setSize(size)
-                .setPosition({200, 300})
-                .Render()
-                .Connect(eventManager, sf::Event::MouseButtonPressed, [this](auto){
-                    std::cout << "qwerty\n";
-                    gameState = GameState::GAME;
-                }
-            )
-        );
+        for (const ButtonProps& buttonProps : buttonsProps) {
+            buttons.emplace_back(
+                (new Button{})
+                    ->setBackgroundColor(background.getFillColor())
+                    .setTextSize(btnTextSize)
+                    .setTextColor(buttonProps.color)
+                    .setFont(Config::font)
+                    .setText(buttonProps.text)
+                    .setSize(size)
+                    .setPosition(buttonProps.position)
+                    .Render()
+                    .Connect(eventManager, sf::Event::MouseButtonPressed, buttonProps.listener)
+            );
+        }
 
         numBarDivider.setSize({3, 220});
         numBarDivider.setFillColor(sf::Color(124, 124, 124));
         numBarDivider.setPosition({180, 180});
 
-        numBarNumber.setFont(font);
+        numBarNumber.setFont(Config::font);
         numBarNumber.setFillColor(numBarDivider.getFillColor());
         numBarNumber.setCharacterSize(btnTextSize);
         numBarNumber.setStyle(sf::Text::Style::Bold);
@@ -88,7 +101,7 @@ public:
         for (auto button : buttons) {
             numBarNumber.setPosition(numBarDivider.getPosition().x - 50, button.getPosition().y);
             numBarNumber.setString(std::to_string(lineNum++));
-            window.draw([this] () {return numBarNumber;}());
+            window.draw(numBarNumber);
             window.draw(button);
         }
         window.draw(numBarDivider);

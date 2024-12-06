@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics/Text.hpp>
 #include <memory>
-#include "Globals.h"
+#include "Config.h"
 
 
 class Alphabet {
@@ -26,8 +26,8 @@ public:
         textShape->setCharacterSize(fontSize);
         textShape->setStyle(sf::Text::Bold);
         textShape->setString(std::wstring(1, ch));
-        textShape->setFillColor(sf::Color::White);
-        textShape->setFont(font);
+        textShape->setFillColor(Config::Workspace::TEXT_COLOR);
+        textShape->setFont(Config::font);
         return textShape;
     }
 };

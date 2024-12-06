@@ -3,15 +3,24 @@ project(ProjectPracticeGame)
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(CLING_ROOT "/home/yel/Programming/Cling/cling")
+include_directories(${CLING_ROOT}/include)
+link_directories(${CLING_ROOT}/lib)
+
 add_executable(ProjectPracticeGame main.cpp
         PlayField.h
         util/EventManager.h
         util/Button.h
         Menu.h
         GameState.h
-        Globals.h
+        Config.h
         Alphabet.h
         Player.h
+        Inventory.h
+        util/IO.h
+        Game.h
+        GameOverScreen.h
+        PhysicalBlocks.cpp
 )
 
-target_link_libraries(ProjectPracticeGame sfml-graphics sfml-window sfml-system)
+target_link_libraries(ProjectPracticeGame sfml-graphics sfml-window sfml-system LLVM)

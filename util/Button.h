@@ -15,9 +15,18 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 #include "EventManager.h"
 
-class BaseButton {
+
+class Button {
 protected:
-    sf::Vector2f size;
+    sf::Color backgroundColor = sf::Color::Black;
+    sf::Color textColor = sf::Color::White;
+    sf::Font font;
+    std::wstring text;
+    int textSize = 20;
+    sf::Vector2f insideTextPosition = {0, 0};
+    sf::Sprite sprite;
+    sf::Texture texture;
+    sf::Text::Style textStyle = sf::Text::Style::Bold; sf::Vector2f size;
     sf::Vector2f position;
 public:
     [[nodiscard]] bool isInside(sf::Vector2f pos) const {
@@ -27,7 +36,7 @@ public:
                pos.y <= position.y + size.y;
     }
 
-    [[nodiscard]] static bool isInside(BaseButton btn, sf::Vector2f pos) {
+    [[nodiscard]] static bool isInside(const Button& btn, sf::Vector2f pos) {
         return pos.x >= btn.position.x &&
                pos.x <= btn.position.x + btn.size.x &&
                pos.y >= btn.position.y &&
@@ -48,20 +57,8 @@ public:
     sf::Vector2f getSize() {
         return size;
     }
-};
 
-class Button : public BaseButton {
-protected:
-    sf::Color backgroundColor = sf::Color::Black;
-    sf::Color textColor = sf::Color::White;
-    sf::Font font;
-    std::wstring text;
-    int textSize = 20;
-    sf::Vector2f insideTextPosition = {0, 0};
-    sf::Sprite sprite;
-    sf::Texture texture;
-    sf::Text::Style textStyle = sf::Text::Style::Bold;
-public:
+
     Button& setPosition(sf::Vector2f newPos) {
         position = newPos;
         return *this;
@@ -126,6 +123,13 @@ public:
         return insideTextPosition;
     }
 
+    sf::Rect<float> getRect() {
+        return {
+            this->position,
+            this->size
+        };
+    }
+
     Button& Render() {
         sf::Text textShape(text, font, textSize);
         textShape.setStyle(textStyle);
@@ -138,8 +142,8 @@ public:
 
         sf::RenderTexture renderTexture;
         renderTexture.create(static_cast<unsigned>(size.x), static_cast<unsigned>(size.y));
-        renderTexture.clear(sf::Color::Transparent);
-        renderTexture.draw(rectangle);
+        renderTexture.clear(backgroundColor);
+//        renderTexture.draw(rectangle);
         renderTexture.draw(textShape);
         renderTexture.display();
 
@@ -150,21 +154,43 @@ public:
     }
 
     Button& Connect(EventManager& eventManager, sf::Event::EventType type, const std::function<void(sf::Event&)>& listener) {
-        sf::Rect<float> btnRect(
-            this->position,
-            this->size
-        );
-        eventManager.AddEventListener(type, [btnRect, listener](sf::Event& event) {
-            std::cout << "listener\n";
-            if (BaseButton::isInside(btnRect, {static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y)})) {
+        eventManager.AddEventListener(type, [this, listener, type](sf::Event& event) {
+            static sf::Vector2f pos;
+//            sf::Vector2f newPos;
+            listenInside(type, event, pos, listener);
+//            pos = newPos;
+
+            if (this->isInside(pos)) {
                 listener(event);
-                std::cout << "inside\n";
-            };
+            }
         });
         return *this;
     }
 
     operator sf::Sprite& () { // NOLINT(*-explicit-constructor)
         return sprite;
+    }
+
+private:
+    void listenInside(sf::Event::EventType type, sf::Event event, sf::Vector2f &pos, const Listener& listener) const {
+        switch (type) {
+            case sf::Event::MouseButtonPressed:
+                pos = sf::Vector2f{
+                    static_cast<float>(event.mouseButton.x),
+                    static_cast<float>(event.mouseButton.y),
+                };
+                break;
+            case sf::Event::MouseMoved:
+                pos = sf::Vector2f{
+                    static_cast<float>(event.mouseMove.x),
+                    static_cast<float>(event.mouseMove.y),
+                };
+                break;
+            default:
+                return;
+        }
+        if (this->isInside(pos)) {
+            listener(event);
+        }
     }
 };
