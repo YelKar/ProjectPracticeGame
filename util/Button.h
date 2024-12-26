@@ -28,19 +28,20 @@ protected:
     sf::Texture texture;
     sf::Text::Style textStyle = sf::Text::Style::Bold; sf::Vector2f size;
     sf::Vector2f position;
+    sf::Vector2f clickAreaPosition;
 public:
     [[nodiscard]] bool isInside(sf::Vector2f pos) const {
-        return pos.x >= position.x &&
-               pos.x <= position.x + size.x &&
-               pos.y >= position.y &&
-               pos.y <= position.y + size.y;
+        return pos.x >= clickAreaPosition.x &&
+               pos.x <= clickAreaPosition.x + size.x &&
+               pos.y >= clickAreaPosition.y &&
+               pos.y <= clickAreaPosition.y + size.y;
     }
 
     [[nodiscard]] static bool isInside(const Button& btn, sf::Vector2f pos) {
-        return pos.x >= btn.position.x &&
-               pos.x <= btn.position.x + btn.size.x &&
-               pos.y >= btn.position.y &&
-               pos.y <= btn.position.y + btn.size.y;
+        return pos.x >= btn.clickAreaPosition.x &&
+               pos.x <= btn.clickAreaPosition.x + btn.size.x &&
+               pos.y >= btn.clickAreaPosition.y &&
+               pos.y <= btn.clickAreaPosition.y + btn.size.y;
     }
 
     [[nodiscard]] static bool isInside(sf::FloatRect rect, sf::Vector2f pos) {
@@ -58,9 +59,13 @@ public:
         return size;
     }
 
-
     Button& setPosition(sf::Vector2f newPos) {
         position = newPos;
+        return *this;
+    }
+
+    Button& setClickAreaPosition(sf::Vector2f newPos) {
+        clickAreaPosition = newPos;
         return *this;
     }
 
@@ -143,7 +148,6 @@ public:
         sf::RenderTexture renderTexture;
         renderTexture.create(static_cast<unsigned>(size.x), static_cast<unsigned>(size.y));
         renderTexture.clear(backgroundColor);
-//        renderTexture.draw(rectangle);
         renderTexture.draw(textShape);
         renderTexture.display();
 
@@ -156,13 +160,7 @@ public:
     Button& Connect(EventManager& eventManager, sf::Event::EventType type, const std::function<void(sf::Event&)>& listener) {
         eventManager.AddEventListener(type, [this, listener, type](sf::Event& event) {
             static sf::Vector2f pos;
-//            sf::Vector2f newPos;
             listenInside(type, event, pos, listener);
-//            pos = newPos;
-
-            if (this->isInside(pos)) {
-                listener(event);
-            }
         });
         return *this;
     }

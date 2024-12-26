@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <codecvt>
 
+
 class IO {
 public:
     static std::wstring::size_type getTextFromFile(const std::string& filename, std::wstring &result) {
@@ -27,42 +28,6 @@ public:
         result = buffer;
 
         return size;
-    }
-
-    struct CompileResult {
-        bool ok;
-        std::wstring text;
-    };
-
-    static CompileResult compileAndRun(const std::wstring& code) {
-        std::wofstream outFile("output/temp.c");
-        if (!outFile.is_open()) {
-            std::cerr << "Failed to open result file" << std::endl;
-            return {
-                false, L""
-            };
-        }
-
-        outFile.write(&code[0], (std::streamsize) code.length());
-        outFile.close();
-        std::cout << "Code was saved successfully" << std::endl;
-
-        auto result = runCommand("./clingCli/cling '#include \"output/temp.c\"' 'main();'");
-
-        std::cout << "RESULT:" << std::endl << result.stdoutOutput << std::endl;
-        std::cout << "\n\n\nERROR:" << std::endl << result.stderrOutput << std::endl;
-        std::cout << "\n\n\nSTATUS: " << result.exitCode << std::endl;
-        if (!result.stdoutOutput.empty()) {
-            return {
-                true,
-                utf8ToWstring(result.stdoutOutput)
-            };
-        } else {
-            return {
-                false,
-                utf8ToWstring(result.stderrOutput)
-            };
-        }
     }
 
     static std::wstring utf8ToWstring(const std::string& utf8Str) {

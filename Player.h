@@ -1,21 +1,100 @@
 #pragma once
 
 #include "Inventory.h"
+#include "util/Image.h"
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 
+
+class Cursor {
+    const std::string path = "assets/cursor.png";
+    Image image;
+    sf::Vector2i imageSize{16, 28};
+
+    sf::Clock walkClock;
+    bool walk = false;
+    int direction = -1;
+
+public:
+    Cursor() : image(path) {}
+
+    void setPosition(sf::Vector2f pos) {
+        if (direction == 1) {
+            image.setPosition(
+                pos - sf::Vector2f{
+                    static_cast<float>(imageSize.x)
+                    * image.getSprite().getScale().x,
+                    0
+                }
+            );
+        } else {
+            image.setPosition(pos);
+        }
+    }
+
+    void setHeight(float height) {
+        auto size = image.getSize();
+        image.getSprite().setScale(
+            height / static_cast<float>(size.y),
+            height / static_cast<float>(size.y)
+        );
+    }
+
+    sf::Sprite& operator [](int num) {
+        image.setRect({
+            sf::Vector2i{num * imageSize.x, 2},
+            imageSize
+        });
+        return image.getSprite();
+    }
+
+    void start(int newDirection) {
+        if (!walk) {
+            walk = true;
+            walkClock.restart();
+        }
+        if (newDirection > 0) {
+            auto scale = image.getSprite().getScale();
+            image.getSprite().setScale(
+                sf::Vector2f{
+                    -1 * std::abs(scale.x),
+                    scale.y
+                }
+            );
+        } else if (newDirection < 0) {
+            auto scale = image.getSprite().getScale();
+            image.getSprite().setScale(
+                sf::Vector2f{
+                    std::abs(scale.x),
+                    scale.y
+                }
+            );
+        }
+        direction = newDirection;
+    }
+
+    void stop() {
+        walk = false;
+    }
+
+    operator sf::Sprite&() { // NOLINT
+        if (!walk) {
+            return (*this)[0];
+        }
+        return (*this)[static_cast<int>(walkClock.getElapsedTime().asSeconds() * 20) % 4 + 1];
+    }
+};
+
 class Player {
-    float hSpeed = 100;
+    const float hSpeed = 100;
     float hDirection = 0;
     float vSpeed = 0;
-    float vAcceleration = 1000;
+    const float vAcceleration = 1000;
     float vAccelerationDirection = 1;
 
-    sf::Vector2f size{15, 30};
+    sf::Vector2f size{20, 56};
     sf::Vector2f position;
     sf::Color color;
-    sf::RectangleShape rect;
-
 
     float jumpSpeed = 200;
     bool isVerticalMovement = false;
@@ -28,13 +107,17 @@ class Player {
 
     PlayField &playField;
     std::shared_ptr<PlayField::letterImage> focusLetter;
+    int oldFocusPos = -1;
     Inventory inventory;
     bool active = true;
+    Cursor cursor;
+
+    sf::Clock errorsShowTimer;
+
+    bool compilationDelay = false;
 
 public:
-    explicit Player(PlayField &playField) : playField(playField) {
-        color = Config::Workspace::TEXT_COLOR;
-    }
+    explicit Player(PlayField &playField) : playField(playField) {}
 
     void setSize(sf::Vector2f size_) {
         size = size_;
@@ -47,13 +130,30 @@ public:
     [[nodiscard]] bool isActive() const {
         return active;
     }
+
+    void init() {
+        color = Config::Workspace::TEXT_COLOR;
+        cursor.setHeight(size.y);
+        active = true;
+        vAccelerationDirection = 1;
+        vSpeed = 0;
+        clearActions();
+    }
+
     void jump() {
         if (!isVerticalMovement) {
             vSpeed = -jumpSpeed * vAccelerationDirection;
+            Config::sounds.play(Config::sounds.CLICK);
+            oldFocusPos = -1;
         }
     }
 
     void update(float dt) {
+        if (compilationDelay) {
+            compilationDelay = false;
+            dt = 0;
+        }
+
         if (!active) {
             return;
         }
@@ -70,6 +170,12 @@ public:
         if (actions.right) {
             moveTo(position + sf::Vector2f{hSpeed * dt, 0});
             hDirection = 1;
+        }
+
+        if (actions.right - actions.left) {
+            cursor.start((int) actions.right - (int) actions.left);
+        } else {
+            cursor.stop();
         }
 
         vSpeed += vAcceleration * vAccelerationDirection * dt;
@@ -89,13 +195,24 @@ public:
         if (playField.getHeight() < static_cast<int>(position.y)) {
             active = false;
         }
+
+        if (errorsShowTimer.getElapsedTime().asMilliseconds() > 3000) {
+            playField.hideErrors();
+        }
     }
 
     bool moveTo(sf::Vector2f pos) {
         focusLetter = playField.intersection({pos, size});
+
         if (focusLetter == nullptr) {
             position = pos;
             return true;
+        }
+
+        if (oldFocusPos != focusLetter->index) {
+            Config::sounds.play(Config::sounds.KEY);
+
+            oldFocusPos = focusLetter->index;
         }
         return false;
     }
@@ -113,10 +230,8 @@ public:
     }
 
     sf::Drawable& getShape() {
-        rect.setSize(size);
-        rect.setPosition(position);
-        rect.setFillColor(color);
-        return rect;
+        cursor.setPosition(position);
+        return cursor;
     }
 
     void changeGravity() {
@@ -134,11 +249,17 @@ public:
         eventManager.AddEventListener(sf::Event::KeyPressed, actionsListener());
     }
 
+    void clearActions() {
+        actions = {};
+    }
+
 private:
     void inventoryChangeEventsListen(sf::Event event) {
         if (this->focusLetter == nullptr) {
             return;
         }
+
+        Config::sounds.play(Config::sounds.TAKE);
 
         if (event.key.shift) {
             auto letterFromInventory = this->inventory.toggle();
@@ -213,6 +334,11 @@ private:
                     } else {
                         this->inventory.forward();
                     }
+                case sf::Keyboard::Scan::C:
+                    playField.checkErrors();
+                    errorsShowTimer.restart();
+                    compilationDelay = true;
+                    break;
                 default:
                     break;
             }

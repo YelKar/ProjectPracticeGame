@@ -20,7 +20,10 @@ add_executable(ProjectPracticeGame main.cpp
         util/IO.h
         Game.h
         GameOverScreen.h
-        PhysicalBlocks.cpp
+        Sound.h
+        util/Compilation.h
+        Bonus.h
+        ErrorPlace.h
 )
 
-target_link_libraries(ProjectPracticeGame sfml-graphics sfml-window sfml-system LLVM)
+target_link_libraries(ProjectPracticeGame sfml-graphics sfml-window sfml-system sfml-audio LLVM)

@@ -7,6 +7,7 @@
 #include <memory>
 #include <iostream>
 #include "Alphabet.h"
+#include "util/Compilation.h"
 
 
 using namespace Config::Workspace;
@@ -14,13 +15,16 @@ using namespace Config::Workspace;
 
 class PlayField {
     Alphabet alphabet;
-    int LINE_SPACE = 30;
-    int letterWidth = 22;
-    int letterHeight = 40;
+    int LINE_SPACE = 56;
+    int letterWidth = 32;
+    int letterHeight = 56;
     std::wstring code;
 
     int focus = -1;
     int height{};
+    Compilation::CompilationResult compilationResult = {
+        true, L""
+    };
 
 public:
     typedef struct letterImage {
@@ -33,7 +37,7 @@ public:
     std::map<int, std::map<int, letterImage>> letterImages;
 
     explicit PlayField() {
-        alphabet.setFontSize(30);
+        alphabet.setFontSize(static_cast<int>(letterHeight * 0.8));
         alphabet.setSymbolSize({static_cast<float>(letterWidth), static_cast<float>(letterHeight)});
     }
 
@@ -127,6 +131,7 @@ public:
 
     void draw(sf::RenderWindow& window) const {
         window.clear(BACKGROUND_COLOR);
+        drawErrors(window);
         auto letters = letterImages;
         for (const auto& line : letters) {
             for (const auto& letter : line.second) {
@@ -138,8 +143,33 @@ public:
         }
     }
 
+    void drawErrors(sf::RenderWindow& window) const {
+        sf::RectangleShape rect({static_cast<float>(letterWidth), static_cast<float>(letterHeight)});
+        rect.setFillColor(LETTER_ERROR_BACKGROUND_COLOR);
+        rect.setOutlineColor(LETTER_ERROR_STROKE_COLOR);
+        rect.setOutlineThickness(2);
+        if (!compilationResult.ok) {
+            auto errors = Compilation::parseErrors(compilationResult.text);
+
+            for (const auto& error : errors) {
+                rect.setPosition({static_cast<float>((error.posInLine - 1) * letterWidth), static_cast<float>((error.line - 1) * (letterHeight + LINE_SPACE))});
+                window.draw(rect);
+            }
+        }
+    }
+
     void setFocus(int index) {
         focus = index;
+    }
+
+    void checkErrors() {
+        compilationResult = Compilation::compileAndRun(code);
+    }
+
+    void hideErrors() {
+        compilationResult = {
+            true, L""
+        };
     }
 
 private:

@@ -35,11 +35,17 @@ public:
     }
 
     void forward() {
-        selection = std::min(selection + 1, (int) letters.max_size() - 1);
+        selection++;
+        if ((int) letters.max_size() <= selection) {
+            selection = 0;
+        }
     }
 
     void backward() {
-        selection = std::max(selection - 1, 0);
+        if (selection == 0) {
+            selection = (int) letters.max_size();
+        }
+        selection--;
     }
 
     operator sf::Drawable&() {
@@ -50,7 +56,6 @@ public:
             - sf::Vector2f{CELL_BORDER_SIZE, CELL_BORDER_SIZE} * 2.f
         );
         cell.setOutlineColor(BORDER_COLOR);
-//        cell.setOutlineThickness(CELL_BORDER_SIZE);
 
         sf::Text text;
         text.setFillColor(SYMBOL_COLOR);
