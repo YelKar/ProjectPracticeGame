@@ -8,6 +8,8 @@ class PhysicalBlock {
 
     std::vector<Point> points;
     float angle = 0;
+    float rotationSpeed = 0;
+
     sf::Texture& texture;
 public:
     PhysicalBlock(PlayField &playField_, sf::Vector2i size_, sf::Texture& texture_)

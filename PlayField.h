@@ -26,6 +26,8 @@ class PlayField {
         true, L""
     };
 
+    std::vector<Compilation::Error> errors;
+
 public:
     typedef struct letterImage {
         wchar_t letter{};
@@ -55,6 +57,20 @@ public:
 
     [[nodiscard]] int getHeight() const {
         return height;
+    }
+
+    [[nodiscard]] sf::Vector2i getSize() const {
+        int width = 0;
+        int height_ = 0;
+
+        for (const auto& line : letterImages) {
+            width = std::max((int) line.second.size(), width);
+            height_ ++;
+        }
+        return {
+            width * letterWidth,
+            height_ * (letterHeight + LINE_SPACE)
+        };
     }
 
     void update() {
@@ -129,7 +145,7 @@ public:
         }
     }
 
-    void draw(sf::RenderWindow& window) const {
+    void draw(sf::RenderWindow& window) {
         window.clear(BACKGROUND_COLOR);
         drawErrors(window);
         auto letters = letterImages;
@@ -143,13 +159,20 @@ public:
         }
     }
 
-    void drawErrors(sf::RenderWindow& window) const {
+    sf::Vector2f getFirstErrorPosition() {
+        if (errors.empty()) {
+            return {};
+        }
+        return {static_cast<float>((errors[0].posInLine - 1) * letterWidth), static_cast<float>((errors[0].line - 1) * (letterHeight + LINE_SPACE))};
+    }
+
+    void drawErrors(sf::RenderWindow& window) {
         sf::RectangleShape rect({static_cast<float>(letterWidth), static_cast<float>(letterHeight)});
         rect.setFillColor(LETTER_ERROR_BACKGROUND_COLOR);
         rect.setOutlineColor(LETTER_ERROR_STROKE_COLOR);
         rect.setOutlineThickness(2);
         if (!compilationResult.ok) {
-            auto errors = Compilation::parseErrors(compilationResult.text);
+            Compilation::parseErrors(errors, compilationResult.text);
 
             for (const auto& error : errors) {
                 rect.setPosition({static_cast<float>((error.posInLine - 1) * letterWidth), static_cast<float>((error.line - 1) * (letterHeight + LINE_SPACE))});
@@ -170,6 +193,10 @@ public:
         compilationResult = {
             true, L""
         };
+    }
+
+    bool visibleErrors() {
+        return !compilationResult.ok;
     }
 
 private:

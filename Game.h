@@ -12,6 +12,9 @@
 #include "GameOverScreen.h"
 #include "Sound.h"
 #include "util/Compilation.h"
+#include "Bonuses.h"
+#include "Platform.h"
+#include "Shortcuts.h"
 
 
 class Game {
@@ -29,6 +32,7 @@ class Game {
     sf::RenderWindow window{sf::VideoMode::getDesktopMode(), "qwerty", sf::Style::Fullscreen};
     sf::View camera;
     PlayField playField;
+    Bonuses bonuses;
     GameOverScreen gameOverScreen;
 
     Player player;
@@ -37,6 +41,9 @@ class Game {
 
     sf::Clock clock;
     Button quitBtn;
+    Platform platform;
+
+    Shortcuts shortcutRender;
 
     std::vector<std::string> levels = {
         "multiplicationTable.cpp",
@@ -45,10 +52,12 @@ class Game {
     };
 
     int currentLevel = 0;
+    std::map<GameState, std::vector<Shortcut>> shortcuts;
 
 public:
     Game()
     : player(playField),
+    platform(playField),
     menu(window, menuEventManager, gameState),
     gameOverScreen(
         gameOverScreenEventManager,
@@ -76,9 +85,16 @@ public:
 
     void Init() {
         menu.Init();
+        initShortcuts();
 
         player.listenEvents(gameEventManager);
 
+        initEventListeners();
+
+        clock.restart();
+    }
+
+    void initEventListeners() {
         commonEventManager.AddEventListener(sf::Event::Closed, [this](auto _) {
             window.close();
         });
@@ -90,7 +106,21 @@ public:
             }
         });
 
-        clock.restart();
+        gameEventManager.AddEventListener(sf::Event::KeyPressed, [this](sf::Event event) {
+            if (event.key.scancode == sf::Keyboard::Scan::T) {
+                if (event.key.shift) {
+                    if (platform.getRect().intersects(sf::FloatRect(player.getPosition(), player.getSize()))) {
+                        platform.toggle();
+                    } else {
+                        platform.put();
+                    }
+                } else if (platform.hasTargets()) {
+                    platform.nextTarget();
+                } else {
+                    givePlatform();
+                }
+            }
+        });
     }
 
     void clear() {
@@ -100,6 +130,10 @@ public:
 
         playField.setCode(code);
         playField.update();
+
+        bonuses.clear();
+        bonuses.setPlayFieldSize(playField.getSize());
+        bonuses.addRandomCountOfRandomBonuses(4);
     }
 
     void nextLevel() {
@@ -126,6 +160,9 @@ public:
                 );
                 playField.draw(window);
                 window.draw(gameOverScreen.getShape());
+                shortcutRender.Render(shortcuts[GameState::GAME_END]);
+                shortcutRender.updatePosition((sf::Vector2f) window.getSize(), camera.getCenter());
+                window.draw(shortcutRender);
                 break;
             case GameState::MENU:
                 menu.update();
@@ -134,6 +171,9 @@ public:
                 break;
             case GameState::GAME:
                 gameUpdate(dt);
+                shortcutRender.Render(shortcuts[GameState::GAME]);
+                shortcutRender.updatePosition((sf::Vector2f) window.getSize(), camera.getCenter());
+                window.draw(shortcutRender);
                 break;
             case GameState::GAME_START:
                 clear();
@@ -197,6 +237,12 @@ public:
             return;
         }
 
+        auto intersection = bonuses.intersection({player.getPosition(), player.getSize()});
+        if (intersection != nullptr) {
+            bonuses.take(intersection->index);
+            player.activateBonus();
+        }
+
         auto playerPos = player.getPosition();
         auto playerSize = player.getSize();
         camera.setCenter(
@@ -209,13 +255,95 @@ public:
         playField.setFocus(focusedLetter != nullptr ? focusedLetter->index : -1);
         playField.draw(window);
 
-        window.draw(player.getShape());
         auto inventory = (sf::Sprite&) player.getInventoryShape();
         inventory.setPosition(
             sf::Vector2f (window.getSize() - inventory.getTexture()->getSize())
             + camera.getCenter() - sf::Vector2f (window.getSize()) / 2.f
         );
+
+        platform.update(dt);
+        updatePlatformCollision();
+
+        bonuses.draw(window);
+        window.draw(player.getShape());
         window.draw(inventory);
+
+        window.draw(platform);
+
+        window.draw(shortcutRender);
         window.setView(camera);
+    }
+
+    void updatePlatformCollision() {
+        if (platform.isTaken()) {
+            auto platformRect = platform.getRect();
+            player.setPosition(sf::Vector2f{
+                platformRect.left + (platformRect.width - player.getSize().x) / 2,
+                platformRect.top - player.getSize().y + platformRect.height - 5,
+            });
+            if (!platform.hasTargets()) {
+                platform.put();
+            }
+        }
+        if (player.makeAction()) {
+            platform.put();
+        }
+    }
+
+    void givePlatform() {
+        if (playField.visibleErrors()) {
+            platform.addTarget(player.getPosition() + sf::Vector2f{0, player.getSize().y});
+            auto error = playField.getFirstErrorPosition();
+            platform.addTarget(error + sf::Vector2f{0, 4});
+        }
+    }
+
+    void initShortcuts() {
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"A / ArrayLeft",
+            .description = L"Движение налево",
+        });
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"D / ArrayRight",
+            .description = L"Движение направо",
+        });
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"W / ArrayUp",
+            .description = L"Прыжок",
+        });
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"Q",
+            .description = L"Изменить гравитацию",
+        });
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"E",
+            .description = L"Взять/Обменять буквы",
+        });
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"Shift+E",
+            .description = L"Положить букву",
+        });
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"Shift+A",
+            .description = L"Сдвинуть букву влево",
+        });
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"Shift+D",
+            .description = L"Сдвинуть букву вправо",
+        });
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"T",
+            .description = L"Вызвать платформу\nВозможно только при действии бонуса"
+        });
+        shortcuts[GameState::GAME].push_back({
+            .keys = L"Shift+T",
+            .description = L"Встать/Сойти"
+        });
+
+
+        shortcuts[GameState::GAME_END].push_back({
+            .keys = L"ESC",
+            .description = L"Выйти"
+        });
     }
 };

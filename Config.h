@@ -18,6 +18,10 @@ namespace Config {
         const sf::Color LETTER_FOCUS_STROKE_COLOR = sf::Color(126, 207, 134);
         const sf::Color LETTER_ERROR_STROKE_COLOR = sf::Color(255, 30, 0);
         const sf::Color TERMINAL_BACKGROUND_COLOR = sf::Color(37, 37, 38);
+        const sf::Color BONUS_COLOR = sf::Color(57, 57, 58);
+        const sf::Color BONUS_STROKE_COLOR = sf::Color(126, 207, 134);
+        const sf::Color PLATFORM_COLOR = sf::Color(126, 207, 134);
+        const sf::Color SHORTCUTS_COLOR = sf::Color(130, 250, 240);
     }
 
     namespace Inventory {

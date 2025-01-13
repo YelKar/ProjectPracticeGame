@@ -253,6 +253,16 @@ public:
         actions = {};
     }
 
+    void activateBonus() {
+        playField.checkErrors();
+        errorsShowTimer.restart();
+        compilationDelay = true;
+    }
+
+    bool makeAction() {
+        return actions.left || actions.right || actions.jump;
+    }
+
 private:
     void inventoryChangeEventsListen(sf::Event event) {
         if (this->focusLetter == nullptr) {
@@ -334,11 +344,6 @@ private:
                     } else {
                         this->inventory.forward();
                     }
-                case sf::Keyboard::Scan::C:
-                    playField.checkErrors();
-                    errorsShowTimer.restart();
-                    compilationDelay = true;
-                    break;
                 default:
                     break;
             }

@@ -10,6 +10,11 @@
 
 
 class Menu {
+    enum class Page {
+        MAIN,
+        LEVELS
+    };
+
     sf::RenderWindow& window;
     EventManager& eventManager;
     GameState &gameState;

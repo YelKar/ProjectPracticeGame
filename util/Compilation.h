@@ -13,9 +13,7 @@ namespace Compilation {
         std::wstring text;
     };
 
-    std::vector<Error> parseErrors(const std::wstring& input) {
-        std::vector<Error> errors;
-
+    void parseErrors(std::vector<Error>& errors, const std::wstring& input) {
         std::wregex regex(LR"((\d+):(\d+): ошибка: ([\s\S]*?)(?=^\s*\d+|\z))", std::regex::multiline);
         std::wsmatch match;
         std::wstring::const_iterator searchStart(input.cbegin());
@@ -33,7 +31,12 @@ namespace Compilation {
 
             searchStart = match.suffix().first;
         }
+    }
 
+
+    std::vector<Error> parseErrors(const std::wstring& input) {
+        std::vector<Error> errors;
+        parseErrors(errors, input);
         return errors;
     }
 
